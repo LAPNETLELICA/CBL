@@ -1,0 +1,7 @@
+"use client";
+import Link from "next/link";
+import { useEffect,useState } from "react";
+import { LoaderCircle, LockKeyhole } from "lucide-react";
+import { getSupabase } from "@/lib/supabase";
+type State="loading"|"allowed"|"signed-out"|"forbidden";
+export function RoleGuard({children}:{children:React.ReactNode}){const[state,setState]=useState<State>("loading");useEffect(()=>{const s=getSupabase();if(!s){setState("signed-out");return;}void s.auth.getUser().then(async({data})=>{if(!data.user){setState("signed-out");return;}const{data:profile}=await s.from("profiles").select("role,active").eq("id",data.user.id).single();setState(profile?.active&&["store_manager","system_admin"].includes(profile.role)?"allowed":"forbidden");});},[]);if(state==="loading")return <div className="grid min-h-screen place-items-center"><LoaderCircle className="animate-spin"/></div>;if(state!=="allowed")return <div className="grid min-h-screen place-items-center p-6"><div className="panel max-w-lg p-8 text-center"><LockKeyhole className="mx-auto" size={34}/><h1 className="mt-5 text-3xl font-black">Accès équipe requis</h1><p className="mt-3 text-slate-600">{state==="signed-out"?"Connectez-vous avec votre compte équipe.":"Votre compte existe, mais le rôle store_manager doit être attribué par l’administrateur système."}</p><Link className="primary mt-6" href="/login">Ouvrir la connexion</Link></div></div>;return <>{children}</>}

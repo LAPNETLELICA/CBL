@@ -1,0 +1,1 @@
+import type {Metadata} from"next";import"./globals.css";export const metadata:Metadata={title:{default:"Store Manager",template:"%s | Christ Béni Manager"},description:"Gestion web Christ Béni Layette"};export default function Layout({children}:{children:React.ReactNode}){return <html lang="fr"><body>{children}</body></html>}

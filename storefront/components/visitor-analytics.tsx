@@ -1,0 +1,5 @@
+"use client";
+import { useEffect } from "react";
+import { getSupabaseClient } from "@/lib/supabase/client";
+function visitorId(){ const key="christ_beni_visitor"; const existing=localStorage.getItem(key); if(existing)return existing; const created=crypto.randomUUID(); localStorage.setItem(key,created); return created; }
+export function VisitorAnalytics(){ useEffect(()=>{ const supabase=getSupabaseClient(); if(!supabase)return; const id=visitorId(); const heartbeat=()=>{ void supabase.from("visitor_events").insert({visitor_id:id,event_type:"heartbeat"}); }; heartbeat(); const interval=window.setInterval(heartbeat,60_000); const record=(event:MouseEvent)=>{ const link=(event.target as HTMLElement).closest<HTMLAnchorElement>('a[href*="rayon="]'); if(!link)return; const category=new URL(link.href).searchParams.get("rayon"); if(category) void supabase.from("visitor_events").insert({visitor_id:id,event_type:"category_view",category_slug:category}); }; document.addEventListener("click",record); return()=>{window.clearInterval(interval);document.removeEventListener("click",record)}; },[]); return null; }

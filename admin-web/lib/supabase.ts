@@ -1,0 +1,2 @@
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+let client:SupabaseClient|null|undefined;export function getSupabase(){if(client!==undefined)return client;const u=process.env.NEXT_PUBLIC_SUPABASE_URL,k=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;client=u&&k?createClient(u,k,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;return client}export function requireSupabase(){const s=getSupabase();if(!s)throw new Error("Supabase n’est pas configuré.");return s}
