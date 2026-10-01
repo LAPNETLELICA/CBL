@@ -1,11 +1,4 @@
-export type CategoryId =
-  | "chaussettes"
-  | "vetements"
-  | "sommeil"
-  | "eveil"
-  | "repas"
-  | "bain"
-  | "accessoires";
+export type CategoryId = string;
 
 export type Category = {
   id: CategoryId;
@@ -23,6 +16,9 @@ export type Product = {
   description: string;
   categoryId: CategoryId;
   price: number;
+  originalPrice?: number;
+  promotionName?: string;
+  images?: string[];
   image: string;
   age: string;
   size: string;

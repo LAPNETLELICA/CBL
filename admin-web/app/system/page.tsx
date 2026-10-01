@@ -1,93 +1,11 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
-import { Activity, Database, KeyRound, LockKeyhole, Save, Truck } from "lucide-react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Activity, Boxes, FileText, Globe, MessageSquareQuote, Percent, ReceiptText, UsersRound } from "lucide-react";
 import { AdminGuard } from "@/components/guard";
 import { AdminShell, Head } from "@/components/shell";
 import { requireSupabase } from "@/lib/supabase";
-
-type Setting = { key: string; value: Record<string, unknown>; updated_at: string };
-type Zone = { id: string; name: string; delivery_window: string; fee_fcfa: number; active: boolean };
-
-export default function System() {
-  const [settings, setSettings] = useState<Setting[]>([]);
-  const [zones, setZones] = useState<Zone[]>([]);
-  const [logs, setLogs] = useState<Record<string, unknown>[]>([]);
-  const [message, setMessage] = useState("");
-
-  async function load() {
-    const s = requireSupabase();
-    const [a, b, c] = await Promise.all([
-      s.from("site_settings").select("*").order("key"),
-      s.from("audit_logs").select("*").order("created_at", { ascending: false }).limit(50),
-      s.from("delivery_zones").select("*").order("display_order"),
-    ]);
-    setSettings((a.data || []) as Setting[]);
-    setLogs((b.data || []) as Record<string, unknown>[]);
-    setZones((c.data || []) as Zone[]);
-  }
-
-  useEffect(() => { void load(); }, []);
-
-  async function saveSetting(event: FormEvent<HTMLFormElement>, key: string) {
-    event.preventDefault();
-    const form = new FormData(event.currentTarget);
-    try {
-      const value = JSON.parse(String(form.get("json") || "{}")) as Record<string, unknown>;
-      const { error } = await requireSupabase().from("site_settings").upsert({ key, value });
-      if (error) throw error;
-      setMessage(`${key} enregistré.`);
-      await load();
-    } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : "JSON invalide.");
-    }
-  }
-
-  async function updateZone(zone: Zone, patch: Partial<Zone>) {
-    const { error } = await requireSupabase().from("delivery_zones").update(patch).eq("id", zone.id);
-    setMessage(error ? error.message : "Zone mise à jour.");
-    await load();
-  }
-
-  return <AdminGuard><AdminShell>
-    <Head kicker="PLATFORM / SECURITY" title="Système & configuration" copy="Paramètres publics, zones de livraison, sécurité et audit global de l’application." />
-    {message && <div className="error" style={{ marginBottom: 14 }}>{message}</div>}
-    <section className="cards">
-      <div className="card"><LockKeyhole/><strong>RLS</strong><small>politiques d’accès actives</small></div>
-      <div className="card"><KeyRound/><strong>OTP</strong><small>authentification passwordless</small></div>
-      <div className="card"><Database/><strong>{settings.length}</strong><small>clés CMS contrôlées</small></div>
-      <div className="card"><Activity/><strong>{logs.length}</strong><small>événements d’audit chargés</small></div>
-    </section>
-
-    <section className="layout-2">
-      <div className="card">
-        <h2>Configuration publique</h2>
-        <p className="sub">Édition JSON volontairement réservée au system admin.</p>
-        <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
-          {settings.map(setting => <form key={setting.key} onSubmit={event => void saveSetting(event, setting.key)} style={{ display: "grid", gap: 8 }}>
-            <label style={{ fontWeight: 800 }}>{setting.key}</label>
-            <textarea name="json" defaultValue={JSON.stringify(setting.value, null, 2)} style={{ minHeight: 120, borderRadius: 12, border: "1px solid #303a56", background: "#0d1220", color: "white", padding: 12, fontFamily: "monospace" }} />
-            <button className="btn primary" style={{ justifySelf: "start" }}><Save size={15}/>Enregistrer</button>
-          </form>)}
-        </div>
-      </div>
-
-      <div className="card">
-        <h2><Truck size={18} style={{ display: "inline", marginRight: 8 }}/>Zones de livraison</h2>
-        <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
-          {zones.map(zone => <div key={zone.id} style={{ border: "1px solid #202940", borderRadius: 14, padding: 12 }}>
-            <b>{zone.name}</b><p className="sub">{zone.delivery_window}</p>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input type="number" defaultValue={zone.fee_fcfa} onBlur={e => void updateZone(zone, { fee_fcfa: Number(e.currentTarget.value) })} style={{ width: 120, borderRadius: 10, border: "1px solid #303a56", background: "#0d1220", color: "white", padding: 8 }} />
-              <button className="btn ghost" onClick={() => void updateZone(zone, { active: !zone.active })}>{zone.active ? "Actif" : "Inactif"}</button>
-            </div>
-          </div>)}
-        </div>
-      </div>
-    </section>
-
-    <div className="card table-wrap" style={{ marginTop: 16 }}>
-      <h2>Journal d’audit</h2>
-      <table className="table"><thead><tr><th>Action</th><th>Entité</th><th>Détails</th><th>Date</th></tr></thead><tbody>{logs.map((log, index) => <tr key={String(log.id ?? index)}><td>{String(log.action ?? "")}</td><td>{String(log.entity_type ?? "")}</td><td><code>{JSON.stringify(log.details ?? {})}</code></td><td>{log.created_at ? new Date(String(log.created_at)).toLocaleString("fr-FR") : "—"}</td></tr>)}</tbody></table>
-    </div>
-  </AdminShell></AdminGuard>;
-}
+type Log={id:number;action:string;entity_type:string;entity_id:string|null;details:Record<string,unknown>;actor_id:string|null;created_at:string;actor:string};
+const names:Record<string,string>={CMS_INSERT:"a ajouté",CMS_UPDATE:"a modifié",CMS_DELETE:"a supprimé",ORDER_STATUS_CHANGED:"a mis à jour le statut de",PAYMENT_STATUS_CHANGED:"a mis à jour le paiement de",USER_ROLE_CHANGED:"a modifié les accès de",STAFF_INVITED:"a invité",STAFF_REMOVED:"a retiré"};const entities:Record<string,string>={product:"un produit",category:"une catégorie",section:"une section",article:"un contenu",promotion:"une promotion",review:"un avis",site_setting:"le contenu du site",order:"une commande",profile:"un compte"};
+const shortcuts=[{label:"Contenu du site",href:"/website",icon:Globe},{label:"Catalogue",href:"/catalog",icon:Boxes},{label:"Promotions",href:"/promotions",icon:Percent},{label:"Commandes",href:"/orders",icon:ReceiptText},{label:"Avis reçus",href:"/reviews",icon:MessageSquareQuote},{label:"Utilisateurs",href:"/users",icon:UsersRound},{label:"Pages & sections",href:"/content",icon:FileText}];
+export default function ActivityPage(){const[logs,setLogs]=useState<Log[]>([]);const[message,setMessage]=useState("");useEffect(()=>{void(async()=>{const s=requireSupabase();const{data,error}=await s.from("audit_logs").select("id,action,entity_type,entity_id,details,actor_id,created_at").order("created_at",{ascending:false}).limit(100);if(error){setMessage("Impossible de charger l’activité pour le moment.");return}const rows=(data||[])as Omit<Log,"actor">[];const ids=Array.from(new Set(rows.map(r=>r.actor_id).filter((id):id is string=>Boolean(id))));const{data:people}=ids.length?await s.from("profiles").select("id,full_name,email").in("id",ids):{data:[]};const users=new Map((people||[]).map(u=>[u.id,u.full_name||u.email||"Administrateur"]));setLogs(rows.map(row=>({...row,actor:row.actor_id?users.get(row.actor_id)||"Administrateur":"Système"})));})()},[]);return <AdminGuard><AdminShell><Head kicker="SUIVI / ACTIVITÉ" title="Activité & réglages" copy="Qui a changé quoi, et quand. Retrouvez les réglages du site et les dernières actions de l’équipe."/>{message&&<div className="notice" style={{marginBottom:14}}>{message}</div>}<section className="card"><p className="eyebrow">GÉRER LE SITE</p><div className="system-shortcuts">{shortcuts.map(({label,href,icon:Icon})=><Link className="btn" href={href} key={href}><Icon size={16}/>{label}</Link>)}</div></section><section className="card" style={{marginTop:14}}><div className="overview-section-head"><div><p className="eyebrow">JOURNAL DU SITE</p><h2>Modifications récentes</h2></div><span className="tag">{logs.length} actions récentes</span></div>{logs.length?<div className="activity-list">{logs.map(log=>{const action=names[log.action]||"a effectué une action sur";const entity=entities[log.entity_type]||"un élément";const label=String(log.details?.label||"");return <article key={log.id}><span className="activity-dot"/><div><p><b>{log.actor}</b> {action} {entity}{label&&<strong> « {label} »</strong>}</p><small>{new Date(log.created_at).toLocaleString("fr-FR")}</small></div></article>})}</div>:<div className="cms-empty"><Activity size={28}/><b>Aucune activité à afficher</b></div>}</section></AdminShell></AdminGuard>}

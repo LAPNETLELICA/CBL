@@ -34,7 +34,7 @@ export function SmoothExperience() {
           opacity: 1,
           duration: 0.9,
           ease: "power3.out",
-          scrollTrigger: { trigger: element, start: "top 88%", once: true },
+          scrollTrigger: { trigger: element, start: "top 88%", end: "bottom 12%", toggleActions: "play reverse play reverse" },
         },
       ),
     );

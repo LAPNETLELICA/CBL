@@ -12,7 +12,7 @@ This rebuild removes the Java/Spring API, local PostgreSQL application backend, 
 
 ## What was removed
 
-There is no `backend/`, no Maven/Spring Boot service, no Flutter `management_app/`, no application PostgreSQL container, no Nginx dependency, and no `NEXT_PUBLIC_API_URL`. Frontends use only the Supabase publishable key. **Never put a Supabase secret/service-role key in any of the web apps.**
+There is no `backend/`, no Maven/Spring Boot service, no Flutter `management_app/`, no application PostgreSQL container, no Nginx dependency, and no `NEXT_PUBLIC_API_URL`. Browser code uses only the Supabase publishable key. **Never expose a Supabase secret/service-role key to client code or through a `NEXT_PUBLIC_` variable.**
 
 ## 1. Create a Supabase project
 
@@ -22,8 +22,11 @@ Create a Supabase project, then open the SQL editor and apply these files in ord
 2. `supabase/migrations/002_rls_and_storage.sql`
 3. `supabase/migrations/003_business_functions.sql`
 4. `supabase/migrations/004_seed_catalog.sql`
+5. `supabase/migrations/005_content_management.sql`
+6. `supabase/migrations/006_promotions_reviews.sql`
+7. `supabase/migrations/007_customer_review_access.sql`
 
-The migrations create Auth-linked profiles, roles, catalogue, stock, product images, orders, order history, suppliers, purchasing data, CMS values, analytics, Storage policies and audit logs.
+The migrations create Auth-linked profiles, roles, catalogue, stock, product images, orders, order history, suppliers, purchasing data, CMS values, editable site sections/articles, analytics, Storage policies and audit logs. Apply migrations 005, 006, and 007 in order to existing projects before using the expanded admin dashboard and customer review history.
 
 ## 2. Configure OTP
 
@@ -50,6 +53,8 @@ NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=YOUR_PUBLISHABLE_KEY
 ```
 
+For `admin-web` only, administrator invitations/removal also need `SUPABASE_SERVICE_ROLE_KEY` in the server environment. Copy the value from Supabase server secrets; never prefix it with `NEXT_PUBLIC_`, and never add it to `storefront` or `manager-web`. The admin invitation API authenticates the current administrator before using this server-only key.
+
 ## 4. Install and run
 
 ```bash
@@ -69,6 +74,8 @@ Open:
 - Storefront: `http://localhost:3000`
 - Store Manager: `http://localhost:3001`
 - System Admin: `http://localhost:3002`
+
+The admin dashboard includes a **Voir le site** link. On the storefront, signed-in store managers and system administrators see **Retour à l’administration**; customers do not. For deployed apps, set `NEXT_PUBLIC_STOREFRONT_URL` in `admin-web` and `NEXT_PUBLIC_ADMIN_URL` / `NEXT_PUBLIC_MANAGER_URL` in `storefront` to their public addresses.
 
 ## Security model
 

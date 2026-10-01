@@ -7,6 +7,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { deliveryAreas, formatFcfa } from "@/lib/catalog";
 import { useStore } from "@/components/store-provider";
 import { requireSupabaseClient } from "@/lib/supabase/client";
+import { useAuth } from "@/components/auth-provider";
 
 type DrawerStep = "cart" | "checkout" | "success";
 
@@ -21,6 +22,7 @@ type OrderResponse = {
 
 export function CartDrawer() {
   const { lines, subtotal, cartOpen, setCartOpen, setQuantity, clearCart } = useStore();
+  const { user } = useAuth();
   const [step, setStep] = useState<DrawerStep>("cart");
   const [deliveryArea, setDeliveryArea] = useState<string>(deliveryAreas[0].name);
   const [busy, setBusy] = useState(false);
@@ -60,18 +62,19 @@ export function CartDrawer() {
   async function placeOrder(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!lines.length || busy) return;
+    if (!user) { window.location.href = "/connexion"; return; }
     setBusy(true);
     setError("");
     const form = new FormData(event.currentTarget);
     try {
       const supabase = requireSupabaseClient();
       const items = lines.map((line) => {
-        if (line.product.id.startsWith("fallback-")) throw new Error("Le catalogue Supabase n’est pas encore synchronisé. Exécutez les migrations avant de commander.");
+        if (line.product.id.startsWith("fallback-")) throw new Error("Cet article ne peut pas être commandé en ligne pour le moment. Actualisez la page et réessayez.");
         return { product_id: line.product.id, quantity: line.quantity };
       });
       const { data, error: rpcError } = await supabase.rpc("create_order", {
-        p_customer_name: String(form.get("customerName") ?? ""),
-        p_customer_email: String(form.get("email") ?? ""),
+        p_customer_name: String(user.user_metadata.full_name || user.email || "Client"),
+        p_customer_email: String(user.email || ""),
         p_contact_phone: String(form.get("contactPhone") ?? ""),
         p_shipping_address: String(form.get("shippingAddress") ?? ""),
         p_delivery_area: deliveryArea,
@@ -158,7 +161,7 @@ export function CartDrawer() {
               <footer className="border-t border-ink/8 bg-white/46 px-5 py-5 backdrop-blur-xl sm:px-7">
                 <div className="mb-4 flex items-center justify-between"><span className="text-ink/58">Sous-total</span><strong className="text-xl">{formatFcfa(subtotal)}</strong></div>
                 <p className="mb-4 text-sm text-ink/48">Les frais de livraison sont calculés à l’étape suivante.</p>
-                <button type="button" className="dark-button w-full" onClick={() => setStep("checkout")}>Passer la commande</button>
+                <button type="button" className="dark-button w-full" onClick={() => { if (!user) { window.location.href = "/connexion"; } else setStep("checkout"); }}>Passer la commande</button>
               </footer>
             )}
           </>
@@ -168,10 +171,8 @@ export function CartDrawer() {
           <form className="flex min-h-0 flex-1 flex-col" onSubmit={placeOrder}>
             <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-7">
               <div className="grid gap-4">
-                <label className="field-label">Nom complet<input className="field" name="customerName" autoComplete="name" required minLength={2} /></label>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="field-label">Téléphone<input className="field" name="contactPhone" type="tel" autoComplete="tel" required pattern="[+0-9 ()-]{8,20}" /></label>
-                  <label className="field-label">E-mail<input className="field" name="email" type="email" autoComplete="email" required /></label>
+                  <label className="field-label">Téléphone pour la livraison<input className="field" name="contactPhone" type="tel" autoComplete="tel" required pattern="[+0-9 ()-]{8,20}" /></label>
                 </div>
                 <label className="field-label">Adresse de livraison<textarea className="field min-h-24 resize-y" name="shippingAddress" autoComplete="street-address" required minLength={8} /></label>
                 <label className="field-label">Zone de livraison
@@ -181,14 +182,18 @@ export function CartDrawer() {
                 </label>
                 <fieldset>
                   <legend className="mb-2 text-sm font-bold text-[#42506a]">Mode de paiement</legend>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <label className="cursor-pointer rounded-2xl border border-ink/10 bg-white/66 p-4 has-[:checked]:border-[#429bc2] has-[:checked]:bg-[#e8f5fa]">
-                      <input type="radio" name="paymentMethod" value="MOBILE_MONEY" defaultChecked className="mr-2 accent-[#267fa6]" />
-                      <span className="font-bold">Mobile Money</span>
+                  <div className="grid gap-2">
+                    <label className="cursor-not-allowed rounded-2xl border border-ink/10 bg-white/45 p-4 opacity-65">
+                      <input type="radio" name="paymentMethod" value="MOBILE_MONEY" disabled className="mr-2 accent-[#267fa6]" />
+                      <span className="font-bold">MTN Mobile Money</span><span className="ml-2 text-sm text-ink/55">Bientôt disponible</span>
+                    </label>
+                    <label className="cursor-not-allowed rounded-2xl border border-ink/10 bg-white/45 p-4 opacity-65">
+                      <input type="radio" name="paymentMethod" value="ORANGE_MONEY" disabled className="mr-2 accent-[#267fa6]" />
+                      <span className="font-bold">Orange Money</span><span className="ml-2 text-sm text-ink/55">Bientôt disponible</span>
                     </label>
                     <label className="cursor-pointer rounded-2xl border border-ink/10 bg-white/66 p-4 has-[:checked]:border-[#429bc2] has-[:checked]:bg-[#e8f5fa]">
-                      <input type="radio" name="paymentMethod" value="CASH_ON_DELIVERY" className="mr-2 accent-[#267fa6]" />
-                      <span className="font-bold">À la livraison</span>
+                      <input type="radio" name="paymentMethod" value="CASH_ON_DELIVERY" defaultChecked className="mr-2 accent-[#267fa6]" />
+                      <span className="font-bold">Paiement à la livraison</span>
                     </label>
                   </div>
                 </fieldset>

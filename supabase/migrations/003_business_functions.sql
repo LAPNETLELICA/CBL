@@ -102,7 +102,7 @@ begin
     'status', 'PENDING',
     'paymentStatus', case when p_payment_method = 'CASH_ON_DELIVERY' then 'UNPAID' else 'PENDING' end,
     'totalFcfa', v_total,
-    'paymentMessage', case when p_payment_method = 'MOBILE_MONEY' then 'Paiement Mobile Money à connecter via une Supabase Edge Function fournisseur.' else 'Paiement à la livraison.' end
+    'paymentMessage', case when p_payment_method = 'MOBILE_MONEY' then 'Le paiement Mobile Money n’est pas encore disponible. Choisissez le paiement à la livraison.' else 'Paiement à la livraison.' end
   );
 end;
 $$;
